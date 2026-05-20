@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\BorrowingController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LogController;
+use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,8 +30,17 @@ Route::middleware('auth')->group(function () {
         // CRUD Alat
         Route::post('/alat', [ItemController::class, 'store'])->name('items.store');
         Route::put('/alat/{item}', [ItemController::class, 'update'])->name('items.update');
-        Route::post('/alat/{item}/maintenance', [ItemController::class, 'toggleMaintenance'])->name('items.maintenance');
+        Route::post('/alat/{item}/maintenance', [ItemController::class, 'startMaintenance'])->name('items.maintenance');
         
+        // Perbaikan ada di baris bawah ini (tanda kutip pada 'finishMaintenance')
+        Route::post('/maintenance/{maintenanceLog}/selesai', [ItemController::class, 'finishMaintenance'])->name('maintenance.finish');
+        
+        // Halaman Tracking Maintenance
+        Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
+        
+        // Halaman Log Aktivitas
+        Route::get('/log-aktivitas', [LogController::class, 'index'])->name('logs.index');
+
         // Manajemen Mahasiswa
         Route::get('/admin/mahasiswa', [StudentController::class, 'index'])->name('admin.students.index');
         Route::get('/admin/mahasiswa/{student}', [StudentController::class, 'show'])->name('admin.students.show');

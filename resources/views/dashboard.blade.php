@@ -3,22 +3,27 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
             @if(session('success'))
-                <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-xl shadow-sm font-medium">
-                    ✓ {{ session('success') }}
-                </div>
+                <div class="mb-6 p-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-xl shadow-sm font-medium">✓ {{ session('success') }}</div>
             @endif
             @if(session('error'))
-                <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl shadow-sm font-medium">
-                    ✕ {{ session('error') }}
-                </div>
+                <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl shadow-sm font-medium">✕ {{ session('error') }}</div>
             @endif
 
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-md sm:rounded-2xl mb-8">
-                <div class="p-6 text-gray-900 dark:text-gray-100 flex items-center justify-between">
+                <div class="p-6 text-gray-900 dark:text-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-2xl font-bold">Selamat datang, {{ auth()->user()->name }}!</h2>
                         <p class="text-gray-500 dark:text-gray-400 mt-1">Ini adalah dashboard peminjaman alat Anda.</p>
+
+                        <!-- ALERT BOX JIKA AKUN DI SUSPEND -->
+                        @if(auth()->user()->is_suspended)
+                            <div class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <h4 class="text-sm font-bold text-red-700 dark:text-red-400 mb-1">⚠ Akun Anda Dalam Status Suspend!</h4>
+                                <p class="text-sm text-red-600 dark:text-red-300">{{ auth()->user()->suspend_reason ?? 'Akun Anda ditangguhkan oleh Admin. Anda tidak dapat meminjam alat.' }}</p>
+                            </div>
+                        @endif
                     </div>
+
                     <div class="flex items-center space-x-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-6 py-3 rounded-xl shadow-sm">
                         <svg class="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.736 6.979C9.208 6.193 9.696 6 10 6c.304 0 .792.193 1.264.979a1 1 0 001.715-1.029C12.279 4.784 11.232 4 10 4s-2.279.784-2.979 1.95c-.285.475-.507 1-.67 1.55H6a1 1 0 000 2h.013a9.358 9.358 0 000 1H6a1 1 0 100 2h.351c.163.55.385 1.075.67 1.55C7.721 15.216 8.768 16 10 16s2.279-.784 2.979-1.95a1 1 0 10-1.715-1.029C10.792 13.807 10.304 14 10 14c-.304 0-.792-.193-1.264-.979a5.393 5.393 0 01-.402-.821H10a1 1 0 100-2H8.028a7.414 7.414 0 010-1H10a1 1 0 100-2H8.334c.12-.293.256-.571.402-.821z"/></svg>
                         <div class="text-right">
@@ -82,36 +87,19 @@
             </div>
         </div>
 
-        <div x-show="showReturnModal" 
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center" 
-             style="display: none;">
-            
-            <div x-show="showReturnModal" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-200"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
-                 class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mx-4 w-full max-w-md">
-                
+        <div x-show="showReturnModal" x-transition class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center" style="display: none;">
+            <div x-show="showReturnModal" x-transition class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mx-4 w-full max-w-md">
                 <div class="text-center">
                     <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
                         <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Konfirmasi Pengembalian</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                        Apakah Anda yakin ingin mengembalikan alat <span class="font-semibold text-gray-700 dark:text-gray-200" x-text="itemName"></span>? Koin akan dikembalikan (maks 10 koin).
+                    <p class="text-sm text-gray-200 dark:text-gray-300 mb-6">
+                        Apakah Anda yakin ingin mengembalikan alat <span class="font-semibold text-white" x-text="itemName"></span>? Koin akan dikembalikan (maks 10 koin).
                     </p>
                     
                     <div class="flex space-x-3">
-                        <button @click="showReturnModal = false" class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-150">
+                        <button @click="showReturnModal = false" class="flex-1 px-4 py-2.5 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-medium transition duration-150">
                             Batal
                         </button>
                         <form :action="'/kembalikan/' + borrowId" method="POST" class="flex-1">

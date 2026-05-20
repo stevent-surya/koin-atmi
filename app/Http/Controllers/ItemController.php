@@ -3,17 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\MaintenanceLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = Item::all();
+        $query = Item::query();
+
+        // Logic Search Katalog
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('code', 'like', '%' . $search . '%');
+            });
+        }
+
+        $items = $query->get();
         return view('items.index', compact('items'));
     }
 
-    // HAPUS FUNGSI CREATE() DAN STORE() LAMA, GANTI DENGAN INI:
     public function store(Request $request)
     {
         $request->validate([
@@ -22,19 +35,16 @@ class ItemController extends Controller
             'stock' => 'required|integer|min:0',
         ]);
 
-        // Coin cost di-fix kan menjadi 1
         Item::create([
             'name' => $request->name,
             'code' => $request->code,
             'stock' => $request->stock,
             'coin_cost' => 1, 
-            'is_maintenance' => false,
         ]);
 
         return redirect()->route('items.index')->with('success', 'Alat berhasil ditambahkan!');
     }
 
-    // FUNGSI BARU UNTUK EDIT ALAT
     public function update(Request $request, Item $item)
     {
         $request->validate([
@@ -52,14 +62,35 @@ class ItemController extends Controller
         return redirect()->route('items.index')->with('success', 'Alat berhasil diperbarui!');
     }
 
-    // FUNGSI BARU UNTUK TOGGLE MAINTENANCE
-    public function toggleMaintenance(Item $item)
+    public function startMaintenance(Request $request, Item $item)
     {
-        $item->update([
-            'is_maintenance' => !$item->is_maintenance
+        $request->validate([
+            'qty' => 'required|integer|min:1|max:' . $item->stock,
+            'reason' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
         ]);
 
-        $status = $item->is_maintenance ? 'dalam maintenance' : 'berfungsi normal';
-        return back()->with('success', "Status alat berhasil diubah menjadi {$status}.");
+        DB::transaction(function () use ($request, $item) {
+            $item->decrement('stock', $request->qty);
+            MaintenanceLog::create([
+                'item_id' => $item->id,
+                'qty' => $request->qty,
+                'reason' => $request->reason,
+                'location' => $request->location,
+                'status' => 'ongoing',
+            ]);
+        });
+
+        return back()->with('success', 'Alat berhasil dimasukkan ke maintenance.');
+    }
+
+    public function finishMaintenance(MaintenanceLog $maintenanceLog)
+    {
+        DB::transaction(function () use ($maintenanceLog) {
+            $maintenanceLog->item->increment('stock', $maintenanceLog->qty);
+            $maintenanceLog->update(['status' => 'completed']);
+        });
+
+        return back()->with('success', 'Maintenance selesai, stok alat telah dikembalikan.');
     }
 }

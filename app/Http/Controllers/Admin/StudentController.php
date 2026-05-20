@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Borrowing;
+use App\Models\SuspendLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -48,27 +49,29 @@ class StudentController extends Controller
             return back()->with('error', 'Admin tidak bisa di-suspend.');
         }
 
-        // Jika ingin Suspend (butuh alasan)
         if (!$student->is_suspended) {
-            $request->validate([
-                'suspend_reason' => 'required|string|max:255',
-            ], [
-                'suspend_reason.required' => 'Alasan suspend wajib diisi.'
-            ]);
+            $request->validate(['suspend_reason' => 'required|string|max:255'], ['suspend_reason.required' => 'Alasan suspend wajib diisi.']);
 
-            $student->update([
-                'is_suspended' => true,
-                'suspend_reason' => $request->suspend_reason,
+            $student->update(['is_suspended' => true, 'suspend_reason' => $request->suspend_reason]);
+            
+            // Buat Log Suspend
+            SuspendLog::create([
+                'user_id' => $student->id,
+                'admin_id' => auth()->id(),
+                'action' => 'suspended',
+                'reason' => $request->suspend_reason,
             ]);
 
             return back()->with('success', "Akun mahasiswa berhasil disuspend.");
-        } 
-        
-        // Jika ingin Unsuspend (hapus alasan)
-        else {
-            $student->update([
-                'is_suspended' => false,
-                'suspend_reason' => null,
+        } else {
+            $student->update(['is_suspended' => false, 'suspend_reason' => null]);
+
+            // Buat Log Unsuspend
+            SuspendLog::create([
+                'user_id' => $student->id,
+                'admin_id' => auth()->id(),
+                'action' => 'unsuspended',
+                'reason' => 'Akun diaktifkan kembali oleh admin.',
             ]);
 
             return back()->with('success', "Akun mahasiswa berhasil di-unsuspend.");
@@ -77,14 +80,8 @@ class StudentController extends Controller
 
     public function resetPassword(Request $request, User $student)
     {
-        $request->validate([
-            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        $student->update([
-            'password' => Hash::make($request->new_password)
-        ]);
-
+        $request->validate(['new_password' => ['required', 'string', 'min:8', 'confirmed']]);
+        $student->update(['password' => Hash::make($request->new_password)]);
         return back()->with('success', "Password mahasiswa {$student->name} berhasil direset!");
     }
 }
